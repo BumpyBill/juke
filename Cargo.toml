@@ -2,6 +2,11 @@
 name = "juke"
 version = "0.0.1"
 edition = "2021"
+license = "MIT"
+repository = "https://github.com/BumpyBill/juke/"
+documentation = "https://docs.rs/juke"
+description = "🤖 A small engine for prototyping projects"
+keywords = ["gamedev", "graphics", "engine", "game-engine", "game", "gui", "prototype"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
