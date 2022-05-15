@@ -1,3 +1,5 @@
+//! 🤖 A small engine for prototyping projects
+
 pub mod gizmos;
 pub mod math;
 
@@ -5,6 +7,16 @@ use math::vector::Vector2;
 use minifb::{Key, Result, Window, WindowOptions};
 use std::f64::consts::PI;
 
+/// A wrapper for window and frame management
+///
+/// # Examples
+///
+/// ```
+/// let mut engine = Engine::new("Hello, World! - ESC to exit", 320, 180, 3);
+/// ```
+///
+/// # Panics
+/// Panics if the initialization of the window fails
 pub struct Engine {
     pub window: Window,
     pub buffer: Buffer,
@@ -24,6 +36,19 @@ impl Engine {
         }
     }
 
+    /// The main loop
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// Engine::new("Hello, World! - ESC to exit", 320, 180, 3).run(|e: &mut Engine| {
+    ///    // ...
+    //     Ok(())
+    ///});
+    /// ```
+    ///
+    /// # Errors
+    /// Returns an error if the closure returns one or there was an issue updating the frame buffer
     pub fn run<F: Fn(&mut Engine) -> Result<()>>(&mut self, u: F) -> Result<()> {
         while self.window.is_open() && !self.window.is_key_down(Key::Escape) {
             u(self)?;
@@ -74,6 +99,13 @@ impl std::ops::IndexMut<usize> for Buffer {
     }
 }
 
+/// RGB color.
+///
+/// # Examples
+///
+/// ```
+/// Color(255, 0, 255)
+/// ```
 #[derive(Clone)]
 pub struct Color(pub u8, pub u8, pub u8);
 

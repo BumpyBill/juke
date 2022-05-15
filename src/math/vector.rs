@@ -1,6 +1,19 @@
 use num::{NumCast, ToPrimitive};
 use std::f32::consts::PI;
 
+/// A struct representing a 2D point.
+///
+/// # Examples
+///
+/// ```
+/// // Allows for any type of number
+/// Vector2::new(1, 3)
+/// Vector2::new(1., 3.)
+/// Vector2::new(1i8, 3i8)
+/// ```
+///
+/// # Panics
+/// Panics if an error occurs while casting the coordinates to `f32`
 #[derive(Debug, Clone)]
 pub struct Vector2 {
     pub x: f32,
@@ -15,6 +28,17 @@ impl Vector2 {
         }
     }
 
+    /// Rotates a vector clockwise.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// // Rotate a vector 90 degrees
+    /// assert_eq!(Vector2::new(0, 1).rotate(90.), Vector2::new(1, 0));
+    /// ```
+    ///
+    /// # Panics
+    /// Panics if an error occurs while casting the coordinates to `f32`
     pub fn rotate(self, angle: f32) -> Self {
         let angle = angle * PI / 180.;
         let cs = angle.cos();
