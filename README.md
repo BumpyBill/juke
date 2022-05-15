@@ -14,7 +14,7 @@
 ```toml
 # Cargo.toml
 [dependencies]
-minifb = "0.23"
+juke = "0.0.1"
 ```
 
 
