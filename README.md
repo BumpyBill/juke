@@ -31,7 +31,7 @@ fn main() {
     });
 
     match res {
-        Ok(()) => println!("exited succesfully!"),
+        Ok(()) => println!("exited successfully!"),
         Err(e) => panic!("{}", e),
     }
 }
