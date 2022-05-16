@@ -1,11 +1,10 @@
 //! 🤖 A small engine for prototyping projects
 
 pub mod gizmos;
-pub mod math;
+pub use glam as math;
 
-use math::vector::Vector2;
 use minifb::{Key, Result, Window, WindowOptions};
-use std::f64::consts::PI;
+use std::f32::consts::PI;
 
 /// A wrapper for window and frame management
 ///

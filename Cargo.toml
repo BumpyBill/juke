@@ -13,3 +13,4 @@ keywords = ["gamedev", "graphics", "game-engine", "game", "gui"]
 [dependencies]
 minifb = "0.23.0"
 num = "0.4.0"
+glam = "0.20.5"
