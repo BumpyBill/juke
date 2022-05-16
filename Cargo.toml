@@ -1,6 +1,6 @@
 [package]
 name = "juke"
-version = "0.0.11"
+version = "0.0.111"
 edition = "2021"
 license = "MIT"
 repository = "https://github.com/BumpyBill/juke/"
