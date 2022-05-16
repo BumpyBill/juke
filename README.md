@@ -14,7 +14,7 @@
 ```toml
 # Cargo.toml
 [dependencies]
-juke = "0.0.1"
+juke = "0.0.11"
 ```
 
 
