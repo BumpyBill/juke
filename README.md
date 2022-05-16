@@ -14,22 +14,18 @@
 ```toml
 # Cargo.toml
 [dependencies]
-juke = "0.0.11"
+juke = "0.0.111"
 ```
 
 
 ## Example
 ```rs
-use juke::{
-    gizmos,
-    math::{u32::UVec2},
-    *,
-};
+use juke::{gizmos, math::u32::UVec2, *};
 
 fn main() {
     let res = Engine::new("Hello, World! - ESC to exit", 256, 144, 3).run(|e: &mut Engine| {
         let pos = UVec2::new(e.buffer.w as u32 / 2, e.buffer.h as u32 / 2);
-        gizmos::circle(Color(255, 0, 255), &pos.as_vec2(), 50, &mut e.buffer);
+        gizmos::circle(Color(255, 0, 255), &pos, 50, &mut e.buffer);
 
         Ok(())
     });
@@ -39,5 +35,4 @@ fn main() {
         Err(e) => panic!("{}", e),
     }
 }
-
 ```
