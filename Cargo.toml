@@ -8,9 +8,16 @@ documentation = "https://docs.rs/juke"
 description = "🤖 A small engine for prototyping projects"
 keywords = ["gamedev", "graphics", "game-engine", "game", "gui"]
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[features]
+optimize = ["log/release_max_level_warn"]
+default = ["optimize"]
 
 [dependencies]
-minifb = "0.23.0"
-num = "0.4.0"
-glam = "0.20.5"
+egui = "0.17"
+egui_wgpu_backend = "0.17"
+egui-winit = { version = "0.17", default-features = false, features = ["links"] }
+env_logger = "0.9"
+log = "0.4"
+pixels = "0.9.0"
+winit = "0.26"
+winit_input_helper = "0.12"

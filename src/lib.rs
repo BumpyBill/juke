@@ -1,126 +1,113 @@
 //! 🤖 A small engine for prototyping projects
 
-pub use glam as math;
-
-use minifb::{Key, Result, Window, WindowOptions};
+use log::error;
+use pixels::{Error, Pixels, SurfaceTexture};
 use std::time::{Duration, Instant};
+use winit::dpi::LogicalSize;
+use winit::event::{Event, VirtualKeyCode};
+use winit::event_loop::{ControlFlow, EventLoop};
+use winit::window::{Window, WindowBuilder};
+use winit_input_helper::WinitInputHelper;
 
-/// A wrapper for window and frame management
-///
-/// # Examples
-///
-/// ```
-/// let mut engine = Engine::new("Hello, World! - ESC to exit", 320, 180, 3);
-/// ```
-///
-/// # Panics
-/// Panics if the initialization of the window fails
 pub struct Engine {
-    pub window: Window,
-    pub buffer: Buffer,
-
-    pub frame_count: u128,
+    window: Window,
+    input: WinitInputHelper,
+    pixels: Pixels,
+    event_loop: EventLoop<()>,
 }
 
 impl Engine {
-    pub fn new(title: &str, w: usize, h: usize, pixel_size: usize) -> Self {
+    pub fn new(title: &str, w: u32, h: u32, pixel_size: u32) -> Self {
+        env_logger::init();
+        let event_loop = EventLoop::new();
+        let mut input = WinitInputHelper::new();
+        let window = {
+            let size = LogicalSize::new((w * pixel_size) as f64, (h * pixel_size) as f64);
+            WindowBuilder::new()
+                .with_title(title)
+                .with_inner_size(size)
+                .with_resizable(false)
+                .with_maximized(false)
+                .build(&event_loop)
+                .unwrap()
+        };
+        let (mut pixels) = {
+            let window_size = window.inner_size();
+            let scale_factor = window.scale_factor() as f32;
+            let surface_texture =
+                SurfaceTexture::new(window_size.width, window_size.height, &window);
+            let pixels = Pixels::new(w, h, surface_texture).unwrap();
+
+            (pixels)
+        };
+
         Self {
-            window: Window::new(
-                title,
-                w * pixel_size,
-                h * pixel_size,
-                WindowOptions::default(),
-            )
-            .unwrap(),
-            buffer: Buffer::new(w, h),
-            frame_count: 0,
+            window,
+            input,
+            pixels,
+            event_loop,
         }
     }
 
-    /// The main loop
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// Engine::new("Hello, World! - ESC to exit", 320, 180, 3).run(|e: &mut Engine| {
-    ///    // ...
-    //     Ok(())
-    ///});
-    /// ```
-    ///
-    /// # Errors
-    /// Returns an error if the closure returns one or there was an issue updating the frame buffer
-    pub fn run<F: Fn(&mut Engine, Duration) -> Result<()>>(&mut self, u: F) -> Result<()> {
-        let mut prev_time = Instant::now();
-        let target_rate = Duration::from_micros(16666);
+    pub fn run<F: 'static + Fn(FrameContext) -> ()>(mut self, u: F) {
+        let mut frame_count = 0u128;
+        let mut previous_time = Instant::now();
+        const FRAME_TIME: Duration = Duration::from_micros(16666);
 
-        while self.window.is_open() && !self.window.is_key_down(Key::Escape) {
-            let delta = {
-                let real_delta = prev_time.elapsed();
-                if real_delta < target_rate {
-                    let sleep_time = target_rate - real_delta;
-                    std::thread::sleep(sleep_time);
-
-                    real_delta + target_rate
-                } else {
-                    real_delta
+        self.event_loop.run(move |event, _, control_flow| {
+            if self.input.update(&event) {
+                if self.input.key_pressed(VirtualKeyCode::Escape) || self.input.quit() {
+                    *control_flow = ControlFlow::Exit;
+                    return;
                 }
-            };
+                self.window.request_redraw();
+            }
 
-            self.window
-                .update_with_buffer(self.buffer.raw(), self.buffer.w, self.buffer.h)?;
+            match event {
+                Event::RedrawRequested(_) => {
+                    let delta = {
+                        let real_delta = previous_time.elapsed();
+                        if real_delta < FRAME_TIME {
+                            let sleep_time = FRAME_TIME - real_delta;
+                            std::thread::sleep(sleep_time);
 
-            prev_time = Instant::now();
-            self.frame_count += 1;
+                            FRAME_TIME
+                        } else {
+                            real_delta
+                        }
+                    };
 
-            u(self, delta)?;
-        }
-        Ok(())
+                    frame_count += 1;
+                    previous_time = Instant::now();
+
+                    u(FrameContext {
+                        frame_count: frame_count,
+                        buffer: self.pixels.get_frame(),
+                        delta,
+                    });
+
+                    let render_result =
+                        self.pixels.render_with(|encoder, render_target, context| {
+                            context.scaling_renderer.render(encoder, render_target);
+
+                            Ok(())
+                        });
+
+                    if render_result
+                        .map_err(|e| error!("pixels.render() failed: {}", e))
+                        .is_err()
+                    {
+                        *control_flow = ControlFlow::Exit;
+                    }
+                }
+                _ => (),
+            }
+        });
     }
 }
 
-pub struct Buffer<const LENGTH: usize> {
-    pub w: usize,
-    pub h: usize,
-
-    pub val: [u32; LENGTH],
-}
-
-impl<const LENGTH: usize> Buffer<LENGTH> {
-    pub fn new(w: usize, h: usize) -> Self {
-        Buffer {
-            w,
-            h,
-            val: [0; LENGTH],
-        }
-    }
-
-    pub fn raw(&self) -> &[u32; LENGTH] {
-        &self.val
-    }
-
-    pub fn raw_mut(&mut self) -> &mut [u32; LENGTH] {
-        &mut self.val
-    }
-
-    pub fn clear(&mut self, val: u32) {
-        self.val = [1; LENGTH]
-    }
-}
-
-/// RGB color.
-///
-/// # Examples
-///
-/// ```
-/// Color(255, 0, 255)
-/// ```
-#[derive(Clone)]
-pub struct Color(pub u8, pub u8, pub u8);
-
-impl From<Color> for u32 {
-    fn from(color: Color) -> Self {
-        let (r, g, b) = (color.0 as u32, color.1 as u32, color.2 as u32);
-        (r << 16) | (g << 8) | b
-    }
+pub struct FrameContext<'a> {
+    pub frame_count: u128,
+    pub buffer: &'a mut [u8],
+    pub delta: Duration,
 }
