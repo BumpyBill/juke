@@ -189,7 +189,7 @@ dependencies = [
 
 [[package]]
 name = "juke"
-version = "0.0.11"
+version = "0.0.111"
 dependencies = [
  "glam",
  "minifb",

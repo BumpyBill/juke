@@ -1,17 +1,25 @@
 extern crate juke;
 
-use juke::{gizmos, math::u32::UVec2, *};
+use juke::*;
+use std::time::Duration;
 
 fn main() {
-    let res = Engine::new("Hello, World! - ESC to exit", 256, 144, 3).run(|e: &mut Engine| {
-        let pos = UVec2::new(e.buffer.w as u32 / 2, e.buffer.h as u32 / 2);
-        gizmos::circle(Color(255, 0, 255), &pos, 50, &mut e.buffer);
+    let res = Engine::new("Hello, World! - ESC to exit", 256, 144, 3).run(
+        |e: &mut Engine, delta: Duration| {
+            e.buffer.clear();
 
-        Ok(())
-    });
+            println!(
+                "Frame Time: {:?}, FPS: {:?}",
+                delta,
+                1. / delta.as_secs_f32()
+            );
+
+            Ok(())
+        },
+    );
 
     match res {
-        Ok(()) => println!("exited successfully!"),
+        Ok(()) => println!("exited succesfully!"),
         Err(e) => panic!("{}", e),
     }
 }

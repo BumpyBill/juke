@@ -1,10 +1,9 @@
 //! 🤖 A small engine for prototyping projects
 
-pub mod gizmos;
 pub use glam as math;
 
 use minifb::{Key, Result, Window, WindowOptions};
-use std::f32::consts::PI;
+use std::time::{Duration, Instant};
 
 /// A wrapper for window and frame management
 ///
@@ -19,6 +18,8 @@ use std::f32::consts::PI;
 pub struct Engine {
     pub window: Window,
     pub buffer: Buffer,
+
+    pub frame_count: u128,
 }
 
 impl Engine {
@@ -32,6 +33,7 @@ impl Engine {
             )
             .unwrap(),
             buffer: Buffer::new(w, h),
+            frame_count: 0,
         }
     }
 
@@ -48,53 +50,61 @@ impl Engine {
     ///
     /// # Errors
     /// Returns an error if the closure returns one or there was an issue updating the frame buffer
-    pub fn run<F: Fn(&mut Engine) -> Result<()>>(&mut self, u: F) -> Result<()> {
+    pub fn run<F: Fn(&mut Engine, Duration) -> Result<()>>(&mut self, u: F) -> Result<()> {
+        let mut prev_time = Instant::now();
+        let target_rate = Duration::from_micros(16666);
+
         while self.window.is_open() && !self.window.is_key_down(Key::Escape) {
-            u(self)?;
+            let delta = {
+                let real_delta = prev_time.elapsed();
+                if real_delta < target_rate {
+                    let sleep_time = target_rate - real_delta;
+                    std::thread::sleep(sleep_time);
+
+                    real_delta + target_rate
+                } else {
+                    real_delta
+                }
+            };
 
             self.window
                 .update_with_buffer(self.buffer.raw(), self.buffer.w, self.buffer.h)?;
+
+            prev_time = Instant::now();
+            self.frame_count += 1;
+
+            u(self, delta)?;
         }
         Ok(())
     }
 }
 
-pub struct Buffer {
+pub struct Buffer<const LENGTH: usize> {
     pub w: usize,
     pub h: usize,
 
-    val: Vec<u32>,
+    pub val: [u32; LENGTH],
 }
 
-impl Buffer {
+impl<const LENGTH: usize> Buffer<LENGTH> {
     pub fn new(w: usize, h: usize) -> Self {
         Buffer {
             w,
             h,
-            val: vec![0; w * h],
+            val: [0; LENGTH],
         }
     }
 
-    pub fn raw(&self) -> &[u32] {
-        self.val.as_slice()
+    pub fn raw(&self) -> &[u32; LENGTH] {
+        &self.val
     }
 
-    pub fn raw_mut(&mut self) -> &mut [u32] {
-        self.val.as_mut_slice()
+    pub fn raw_mut(&mut self) -> &mut [u32; LENGTH] {
+        &mut self.val
     }
-}
 
-impl std::ops::Index<usize> for Buffer {
-    type Output = u32;
-
-    fn index(&self, index: usize) -> &Self::Output {
-        &self.val[index]
-    }
-}
-
-impl std::ops::IndexMut<usize> for Buffer {
-    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
-        &mut self.val[index]
+    pub fn clear(&mut self, val: u32) {
+        self.val = [1; LENGTH]
     }
 }
 
@@ -110,8 +120,7 @@ pub struct Color(pub u8, pub u8, pub u8);
 
 impl From<Color> for u32 {
     fn from(color: Color) -> Self {
-        let rgb = color.0 as u32;
-        let rgb = (rgb << 8) + color.1 as u32;
-        (rgb << 8) + color.2 as u32
+        let (r, g, b) = (color.0 as u32, color.1 as u32, color.2 as u32);
+        (r << 16) | (g << 8) | b
     }
 }
