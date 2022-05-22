@@ -2,6 +2,7 @@ use egui::{ClippedMesh, Context, TexturesDelta};
 use egui_wgpu_backend::{BackendError, RenderPass, ScreenDescriptor};
 use pixels::{wgpu, PixelsContext};
 use winit::window::Window;
+use crate::resources::ResourceManager;
 
 pub(crate) struct Framework {
     egui_ctx: Context,
@@ -10,7 +11,7 @@ pub(crate) struct Framework {
     rpass: RenderPass,
     paint_jobs: Vec<ClippedMesh>,
     textures: TexturesDelta,
-    pub(crate) gui: Option<Box<dyn Fn(&Context)>>,
+    pub(crate) gui: Option<Box<dyn Fn(&Context, &mut ResourceManager)>>,
 }
 
 impl Framework {
@@ -42,11 +43,11 @@ impl Framework {
         self.egui_state.on_event(&self.egui_ctx, event);
     }
 
-    pub(crate) fn prepare(&mut self, window: &Window) {
+    pub(crate) fn prepare(&mut self, window: &Window, resources: &mut ResourceManager) {
         let raw_input = self.egui_state.take_egui_input(window);
         let output = self.egui_ctx.run(raw_input, |egui_ctx| {
             if let Some(ui) = &self.gui {
-                ui(egui_ctx);
+                ui(egui_ctx, resources);
             }
         });
 

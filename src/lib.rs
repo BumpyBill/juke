@@ -1,5 +1,10 @@
 //! 🤖 A small engine for prototyping projects
 
+mod gui;
+pub mod resources;
+
+use resources::ResourceManager;
+
 use crate::gui::Framework;
 use log::error;
 use pixels::{Pixels, SurfaceTexture};
@@ -12,14 +17,14 @@ use winit_input_helper::WinitInputHelper;
 
 pub use egui;
 
-mod gui;
-
 pub struct Engine {
     window: Window,
     input: WinitInputHelper,
     pixels: Pixels,
     event_loop: EventLoop<()>,
     framework: Framework,
+
+    resources: ResourceManager
 }
 
 impl Engine {
@@ -56,10 +61,11 @@ impl Engine {
             pixels,
             framework,
             event_loop,
+            resources: ResourceManager::new(),
         }
     }
 
-    pub fn run<F: 'static + Fn(FrameContext)>(mut self, u: F) {
+    pub fn run<F: 'static + Fn(FrameContext, &mut ResourceManager)>(mut self, u: F) {
         let mut frame_count = 0u128;
         let mut previous_time = Instant::now();
         const FRAME_TIME: Duration = Duration::from_micros(16666);
@@ -99,8 +105,8 @@ impl Engine {
                         frame_count,
                         buffer: self.pixels.get_frame(),
                         delta,
-                    });
-                    self.framework.prepare(&self.window);
+                    }, &mut self.resources);
+                    self.framework.prepare(&self.window, &mut self.resources);
 
                     let render_result =
                         self.pixels.render_with(|encoder, render_target, context| {
@@ -122,7 +128,7 @@ impl Engine {
         });
     }
 
-    pub fn ui<T: 'static + Fn(&egui::Context)>(mut self, ui: T) -> Self {
+    pub fn ui<T: 'static + Fn(&egui::Context, &mut ResourceManager)>(mut self, ui: T) -> Self {
         self.framework.gui = Some(Box::new(ui));
         self
     }
