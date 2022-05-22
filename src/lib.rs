@@ -1,7 +1,8 @@
 //! 🤖 A small engine for prototyping projects
 
+use crate::gui::Framework;
 use log::error;
-use pixels::{Error, Pixels, SurfaceTexture};
+use pixels::{Pixels, SurfaceTexture};
 use std::time::{Duration, Instant};
 use winit::dpi::LogicalSize;
 use winit::event::{Event, VirtualKeyCode};
@@ -9,18 +10,23 @@ use winit::event_loop::{ControlFlow, EventLoop};
 use winit::window::{Window, WindowBuilder};
 use winit_input_helper::WinitInputHelper;
 
+pub use egui;
+
+mod gui;
+
 pub struct Engine {
     window: Window,
     input: WinitInputHelper,
     pixels: Pixels,
     event_loop: EventLoop<()>,
+    framework: Framework,
 }
 
 impl Engine {
     pub fn new(title: &str, w: u32, h: u32, pixel_size: u32) -> Self {
         env_logger::init();
         let event_loop = EventLoop::new();
-        let mut input = WinitInputHelper::new();
+        let input = WinitInputHelper::new();
         let window = {
             let size = LogicalSize::new((w * pixel_size) as f64, (h * pixel_size) as f64);
             WindowBuilder::new()
@@ -31,25 +37,29 @@ impl Engine {
                 .build(&event_loop)
                 .unwrap()
         };
-        let (mut pixels) = {
+
+        let (pixels, framework) = {
             let window_size = window.inner_size();
             let scale_factor = window.scale_factor() as f32;
             let surface_texture =
                 SurfaceTexture::new(window_size.width, window_size.height, &window);
             let pixels = Pixels::new(w, h, surface_texture).unwrap();
+            let framework =
+                Framework::new(window_size.width, window_size.height, scale_factor, &pixels);
 
-            (pixels)
+            (pixels, framework)
         };
 
         Self {
             window,
             input,
             pixels,
+            framework,
             event_loop,
         }
     }
 
-    pub fn run<F: 'static + Fn(FrameContext) -> ()>(mut self, u: F) {
+    pub fn run<F: 'static + Fn(FrameContext)>(mut self, u: F) {
         let mut frame_count = 0u128;
         let mut previous_time = Instant::now();
         const FRAME_TIME: Duration = Duration::from_micros(16666);
@@ -64,6 +74,11 @@ impl Engine {
             }
 
             match event {
+                Event::WindowEvent { event, .. } => {
+                    // Update egui inputs
+                    self.framework.handle_event(&event);
+                }
+
                 Event::RedrawRequested(_) => {
                     let delta = {
                         let real_delta = previous_time.elapsed();
@@ -81,14 +96,16 @@ impl Engine {
                     previous_time = Instant::now();
 
                     u(FrameContext {
-                        frame_count: frame_count,
+                        frame_count,
                         buffer: self.pixels.get_frame(),
                         delta,
                     });
+                    self.framework.prepare(&self.window);
 
                     let render_result =
                         self.pixels.render_with(|encoder, render_target, context| {
                             context.scaling_renderer.render(encoder, render_target);
+                            self.framework.render(encoder, render_target, context)?;
 
                             Ok(())
                         });
@@ -103,6 +120,11 @@ impl Engine {
                 _ => (),
             }
         });
+    }
+
+    pub fn ui<T: 'static + Fn(&egui::Context)>(mut self, ui: T) -> Self {
+        self.framework.gui = Some(Box::new(ui));
+        self
     }
 }
 
